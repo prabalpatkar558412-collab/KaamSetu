@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import http from "http";
+import voiceRoutes from "./routes/voiceRoutes.js";
 import { Server } from "socket.io";
 
 import aiRoutes from "./routes/aiRoutes.js";
@@ -63,6 +64,7 @@ app.use(express.json());
 app.use("/api/ai", aiRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);
+app.use("/api/voice", voiceRoutes);
 app.use("/api/attendance", attendanceRoutes);
 
 app.get("/", (req, res) => {

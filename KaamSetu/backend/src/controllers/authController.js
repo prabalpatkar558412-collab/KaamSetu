@@ -3,19 +3,26 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 const generateToken = (id) => {
-  return jwt.sign(
-    { id },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "30d",
-    }
-  );
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: "30d",
+  });
 };
 
-export const registerUser = async (
-  req,
-  res
-) => {
+const sendUserResponse = (res, user, statusCode = 200) => {
+  res.status(statusCode).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    location: user.location,
+    skills: user.skills,
+    isOnline: user.isOnline,
+    token: generateToken(user._id),
+  });
+};
+
+export const registerUser = async (req, res) => {
   try {
     const {
       name,
@@ -27,8 +34,7 @@ export const registerUser = async (
       skills,
     } = req.body;
 
-    const userExists =
-      await User.findOne({ email });
+    const userExists = await User.findOne({ email });
 
     if (userExists) {
       return res.status(400).json({
@@ -36,14 +42,8 @@ export const registerUser = async (
       });
     }
 
-    const salt =
-      await bcrypt.genSalt(10);
-
-    const hashedPassword =
-      await bcrypt.hash(
-        password,
-        salt
-      );
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
       name,
@@ -55,17 +55,7 @@ export const registerUser = async (
       skills,
     });
 
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      location: user.location,
-      skills: user.skills,
-      isOnline: user.isOnline,
-      token: generateToken(user._id),
-    });
+    sendUserResponse(res, user, 201);
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -73,39 +63,20 @@ export const registerUser = async (
   }
 };
 
-export const loginUser = async (
-  req,
-  res
-) => {
+export const loginUser = async (req, res) => {
   try {
-    const { email, password } =
-      req.body;
+    const { email, password } = req.body;
 
-    const user =
-      await User.findOne({ email });
+    const user = await User.findOne({ email });
 
     if (
       user &&
-      (await bcrypt.compare(
-        password,
-        user.password
-      ))
+      (await bcrypt.compare(password, user.password))
     ) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        location: user.location,
-        skills: user.skills,
-        isOnline: user.isOnline,
-        token: generateToken(user._id),
-      });
+      sendUserResponse(res, user);
     } else {
       res.status(401).json({
-        message:
-          "Invalid email or password",
+        message: "Invalid email or password",
       });
     }
   } catch (error) {
@@ -115,19 +86,44 @@ export const loginUser = async (
   }
 };
 
-export const getOnlineWorkers =
-  async (req, res) => {
-    try {
-      const workers =
-        await User.find({
-          role: "worker",
-          isOnline: true,
-        });
+export const getOnlineWorkers = async (req, res) => {
+  try {
+    const workers = await User.find({
+      role: "worker",
+      isOnline: true,
+    });
 
-      res.json(workers);
-    } catch (error) {
-      res.status(500).json({
-        message: error.message,
+    res.json(workers);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { role, skills, phone, location } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
       });
     }
-  };
+
+    if (role) user.role = role;
+    if (skills) user.skills = skills;
+    if (phone) user.phone = phone;
+    if (location) user.location = location;
+
+    await user.save();
+
+    sendUserResponse(res, user);
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};

@@ -46,7 +46,7 @@ export default function Register() {
 
       toast.success("Registration Successful");
 
-      navigate("/");
+      navigate("/choose-role");
     } catch (error) {
       toast.error(
         error.response?.data?.message ||

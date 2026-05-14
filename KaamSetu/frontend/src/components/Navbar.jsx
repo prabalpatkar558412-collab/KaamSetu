@@ -28,7 +28,7 @@ export default function Navbar() {
           to="/"
           className="text-3xl font-extrabold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 text-transparent bg-clip-text"
         >
-          KaamCall AI
+          KaamSetu
         </Link>
 
         {/* DESKTOP MENU */}
