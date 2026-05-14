@@ -10,10 +10,8 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
-    role: "worker",
     phone: "",
     location: "",
-    skills: "",
   });
 
   const handleChange = (e) => {
@@ -27,16 +25,9 @@ export default function Register() {
     e.preventDefault();
 
     try {
-      const payload = {
-        ...formData,
-        skills: formData.skills
-          .split(",")
-          .map((skill) => skill.trim()),
-      };
-
       const { data } = await API.post(
         "/auth/register",
-        payload
+        formData
       );
 
       localStorage.setItem(
@@ -69,6 +60,7 @@ export default function Register() {
           type="text"
           name="name"
           placeholder="Name"
+          value={formData.name}
           onChange={handleChange}
           className="w-full p-3 border rounded mb-4"
           required
@@ -78,6 +70,7 @@ export default function Register() {
           type="email"
           name="email"
           placeholder="Email"
+          value={formData.email}
           onChange={handleChange}
           className="w-full p-3 border rounded mb-4"
           required
@@ -87,6 +80,7 @@ export default function Register() {
           type="password"
           name="password"
           placeholder="Password"
+          value={formData.password}
           onChange={handleChange}
           className="w-full p-3 border rounded mb-4"
           required
@@ -96,6 +90,7 @@ export default function Register() {
           type="text"
           name="phone"
           placeholder="Phone"
+          value={formData.phone}
           onChange={handleChange}
           className="w-full p-3 border rounded mb-4"
         />
@@ -104,35 +99,14 @@ export default function Register() {
           type="text"
           name="location"
           placeholder="Location"
-          onChange={handleChange}
-          className="w-full p-3 border rounded mb-4"
-        />
-
-        <input
-          type="text"
-          name="skills"
-          placeholder="Skills (comma separated)"
-          onChange={handleChange}
-          className="w-full p-3 border rounded mb-4"
-        />
-
-        <select
-          name="role"
+          value={formData.location}
           onChange={handleChange}
           className="w-full p-3 border rounded mb-6"
-        >
-          <option value="worker">
-            Worker
-          </option>
-
-          <option value="contractor">
-            Contractor
-          </option>
-        </select>
+        />
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-3 rounded"
+          className="w-full bg-blue-600 text-white p-3 rounded font-semibold hover:bg-blue-700 transition"
         >
           Register
         </button>
