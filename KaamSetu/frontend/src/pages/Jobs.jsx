@@ -5,12 +5,78 @@ import {
   TileLayer,
   Marker,
   Popup,
+  CircleMarker,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { motion } from "framer-motion";
+import L from "leaflet";
+
+const createMarkerIcon = (color, label) => {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        width: 34px;
+        height: 34px;
+        background: ${color};
+        border: 3px solid white;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          transform: rotate(45deg);
+          color: white;
+          font-size: 16px;
+          font-weight: 900;
+        ">
+          ${label}
+        </div>
+      </div>
+    `,
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -34],
+  });
+};
+
+const workerIcon = createMarkerIcon("#2563eb", "👷");
+const plumberIcon = createMarkerIcon("#16a34a", "🔧");
+const electricianIcon = createMarkerIcon("#f59e0b", "⚡");
+const painterIcon = createMarkerIcon("#9333ea", "🎨");
+const carpenterIcon = createMarkerIcon("#ea580c", "🪚");
+const defaultJobIcon = createMarkerIcon("#ef4444", "📍");
+
+const getJobIcon = (job) => {
+  const skills =
+    job.skillsRequired?.join(" ").toLowerCase() || "";
+
+  if (skills.includes("plumber")) return plumberIcon;
+  if (skills.includes("electrician")) return electricianIcon;
+  if (skills.includes("painter")) return painterIcon;
+  if (skills.includes("carpenter")) return carpenterIcon;
+
+  return defaultJobIcon;
+};
+
+const getJobColor = (job) => {
+  const skills =
+    job.skillsRequired?.join(" ").toLowerCase() || "";
+
+  if (skills.includes("plumber")) return "#16a34a";
+  if (skills.includes("electrician")) return "#f59e0b";
+  if (skills.includes("painter")) return "#9333ea";
+  if (skills.includes("carpenter")) return "#ea580c";
+
+  return "#ef4444";
+};
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
+
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
 
@@ -21,7 +87,8 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const c =
+    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
 };
@@ -72,7 +139,9 @@ export default function Jobs() {
           ) || [];
 
         return jobSkills.some((skill) =>
-          skills.some((workerSkill) => workerSkill === skill)
+          skills.some(
+            (workerSkill) => workerSkill === skill
+          )
         );
       });
 
@@ -118,13 +187,19 @@ export default function Jobs() {
     try {
       await API.put(`/jobs/book/${job._id}`);
 
-      localStorage.setItem("activeJob", JSON.stringify(job));
+      localStorage.setItem(
+        "activeJob",
+        JSON.stringify(job)
+      );
 
       alert("Job Accepted Successfully");
 
       window.location.href = "/job-tracking";
     } catch (error) {
-      alert(error.response?.data?.message || "Booking Failed");
+      alert(
+        error.response?.data?.message ||
+          "Booking Failed"
+      );
     }
   };
 
@@ -145,41 +220,98 @@ export default function Jobs() {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        <Marker position={userLocation}>
-          <Popup>Your Location</Popup>
+        <CircleMarker
+          center={userLocation}
+          radius={22}
+          pathOptions={{
+            color: "#2563eb",
+            fillColor: "#2563eb",
+            fillOpacity: 0.18,
+          }}
+        />
+
+        <Marker position={userLocation} icon={workerIcon}>
+          <Popup>
+            <b>👷 Your Location</b>
+          </Popup>
         </Marker>
 
         {filteredJobs.map((job) => (
-          <Marker
-            key={job._id}
-            position={[job.location.lat, job.location.lng]}
-            eventHandlers={{
-              click: () => setSelectedJob(job),
-            }}
-          >
-            <Popup>
-              <b>{job.title}</b>
-              <br />
-              ₹{job.salary}
-              <br />
-              {getDistance(job)} km away
-            </Popup>
-          </Marker>
+          <div key={job._id}>
+            <CircleMarker
+              center={[
+                job.location.lat,
+                job.location.lng,
+              ]}
+              radius={
+                selectedJob?._id === job._id ? 24 : 14
+              }
+              pathOptions={{
+                color: getJobColor(job),
+                fillColor: getJobColor(job),
+                fillOpacity:
+                  selectedJob?._id === job._id ? 0.25 : 0.12,
+              }}
+            />
+
+            <Marker
+              position={[
+                job.location.lat,
+                job.location.lng,
+              ]}
+              icon={getJobIcon(job)}
+              eventHandlers={{
+                click: () => setSelectedJob(job),
+              }}
+            >
+              <Popup>
+                <b>{job.title}</b>
+                <br />
+                Skill:{" "}
+                {job.skillsRequired?.join(", ") ||
+                  "General"}
+                <br />
+                ₹{job.salary}
+                <br />
+                {getDistance(job)} km away
+              </Popup>
+            </Marker>
+          </div>
         ))}
       </MapContainer>
 
-      <div className="absolute top-24 left-4 z-[1000] backdrop-blur-xl bg-white/70 border border-white/40 p-5 rounded-3xl shadow-2xl">
-        <h2 className="font-bold text-xl">Skill Based Jobs</h2>
-        <p>Your Skills: {workerSkills.join(", ")}</p>
+      <div className="absolute top-24 left-4 z-[1000] backdrop-blur-xl bg-white/75 border border-white/40 p-5 rounded-3xl shadow-2xl">
+        <h2 className="font-bold text-xl">
+          Skill Based Jobs
+        </h2>
+
+        <p>
+          Your Skills:{" "}
+          {workerSkills.length > 0
+            ? workerSkills.join(", ")
+            : "Not selected"}
+        </p>
+
         <p className="text-green-600 font-bold">
           Matching Jobs: {filteredJobs.length}
         </p>
+
+        <div className="mt-3 text-sm space-y-1">
+          <p>👷 Blue = You</p>
+          <p>🔧 Green = Plumber</p>
+          <p>⚡ Yellow = Electrician</p>
+          <p>🎨 Purple = Painter</p>
+          <p>🪚 Orange = Carpenter</p>
+        </div>
       </div>
 
       <motion.div
         initial={{ y: 300, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 90 }}
+        transition={{
+          type: "spring",
+          stiffness: 90,
+        }}
         className="absolute bottom-0 left-0 right-0 z-[1000] backdrop-blur-2xl bg-white/80 rounded-t-[40px] shadow-2xl p-5 max-h-[45vh] overflow-y-auto border-t border-white/40"
       >
         <h2 className="text-2xl font-bold mb-4">
@@ -198,6 +330,12 @@ export default function Jobs() {
 
             <p className="mt-2">
               📍 {selectedJob.location.address}
+            </p>
+
+            <p className="mt-2 font-semibold text-gray-700">
+              Skill:{" "}
+              {selectedJob.skillsRequired?.join(", ") ||
+                "General"}
             </p>
 
             <div className="flex gap-4 mt-3 font-bold">
@@ -250,15 +388,24 @@ export default function Jobs() {
               whileTap={{
                 scale: 0.97,
               }}
-              className="w-full text-left border p-4 rounded-2xl bg-white/80 backdrop-blur-lg shadow-lg transition"
+              className={`w-full text-left border p-4 rounded-2xl bg-white/80 backdrop-blur-lg shadow-lg transition ${
+                selectedJob?._id === job._id
+                  ? "ring-4 ring-blue-300"
+                  : ""
+              }`}
             >
               <div className="font-bold">
                 {job.title}
               </div>
 
               <div className="text-sm text-gray-600">
-                {getDistance(job)} km • ETA {getETA(job)} min • ₹
-                {job.salary}
+                {getDistance(job)} km • ETA{" "}
+                {getETA(job)} min • ₹{job.salary}
+              </div>
+
+              <div className="text-xs text-gray-500 mt-1">
+                {job.skillsRequired?.join(", ") ||
+                  "General"}
               </div>
             </motion.button>
           ))}
